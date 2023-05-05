@@ -315,3 +315,24 @@ func TestMultiGetWithMissCache(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiGetCacheMiss(t *testing.T) {
+	debugInit(nil)
+	mp, err := MultiGet([]string{"not exist"}, findMany)
+	if err != nil {
+		t.Error(err)
+	}
+	if mp["not exist"] != "" {
+		t.Error("should be empty")
+	}
+	if !debugExist("not exist") {
+		t.Error("should  exist")
+	}
+	mp, err = MultiGet([]string{"not exist"}, findMany)
+	if err != nil {
+		t.Error(err)
+	}
+	if mp["not exist"] != "" {
+		t.Error("should be empty")
+	}
+}

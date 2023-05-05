@@ -93,14 +93,14 @@ func singleFlightKey(t any) string {
 }
 
 // Get gets the value from cache, if not found, fetch from db then add to cache
-func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err error) {
+func Get[T any](key string, dbFetch func(string) (T, bool, error)) (res T, err error) {
 	v, ok := c.cache.Get(key)
 	if ok {
 		switch v.(type) {
 		case notFoundPlaceHolder:
 			err = ErrNotFound
 		default:
-			res = v.(U)
+			res = v.(T)
 		}
 		return
 	}
@@ -113,7 +113,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 		}
 		return
 	})
-	res = rr.(U)
+	res = rr.(T)
 	var miss any
 	if err != nil && err != ErrNotFound {
 		return
@@ -138,27 +138,28 @@ func addCacheAnyItem(k string, u any) {
 }
 
 // cacheAnyThings caches any things
-func cacheAnyThings[T any](keys []string) (res map[string]T) {
+func cacheAnyThings[T any](keys []string) (res map[string]T, miss []string) {
 	l := len(keys)
 	if l == 0 {
 		return
 	}
-	ress := make(map[string]any, len(keys))
+	cacheRes := make(map[string]any, len(keys))
 	for _, id := range keys {
 		v, ok := c.cache.Get(id)
 		if ok {
-			ress[id] = v
+			cacheRes[id] = v
 		}
 	}
 	res = make(map[string]T, len(keys))
 	for _, key := range keys {
-		v, ok := ress[key]
+		v, ok := cacheRes[key]
 		if !ok {
+			miss = append(miss, key)
 			continue
 		}
 		switch v.(type) {
 		case notFoundPlaceHolder:
-			delete(ress, key)
+			continue
 		case T:
 			res[key] = v.(T)
 		default:
@@ -169,22 +170,17 @@ func cacheAnyThings[T any](keys []string) (res map[string]T) {
 }
 
 // MultiGet gets the values from cache, if not found, fetch from db then add to cache
-func MultiGet[U any](keys []string, dbFetch func(id []string) (map[string]U, error)) (res map[string]U, err error) {
+func MultiGet[T any](keys []string, dbFetch func(id []string) (map[string]T, error)) (res map[string]T, err error) {
 	if len(keys) == 0 {
 		return
 	}
-	res = cacheAnyThings[U](keys)
 	var miss []string
-	for _, key := range keys {
-		if _, ok := res[key]; !ok {
-			miss = append(miss, key)
-		}
-	}
+	res, miss = cacheAnyThings[T](keys)
 	missLen := len(miss)
 	if missLen == 0 {
 		return
 	}
-	missData := make(map[string]U, missLen)
+	missData := make(map[string]T, missLen)
 	var mutex sync.Mutex
 	group, _ := errgroup.WithContext(context.Background())
 	if missLen > 10 {
@@ -213,7 +209,7 @@ func MultiGet[U any](keys []string, dbFetch func(id []string) (map[string]U, err
 	}
 	err = group.Wait()
 	if res == nil {
-		res = make(map[string]U, len(keys))
+		res = make(map[string]T, len(keys))
 	}
 	for k, v := range missData {
 		res[k] = v

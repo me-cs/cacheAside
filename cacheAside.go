@@ -115,7 +115,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 	})
 	res = rr.(U)
 	var miss any
-	if err != nil {
+	if err != nil && err != ErrNotFound {
 		return
 	}
 	if err == ErrNotFound {

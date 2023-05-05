@@ -261,3 +261,35 @@ func TestMultiGet(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiGetWithMissCache(t *testing.T) {
+	debugInit(nil)
+	keys := make([]string, 0)
+	for i := 0; i < 4000; i++ {
+		keys = append(keys, fmt.Sprintf("%d", i))
+	}
+	mp, err := MultiGet(keys, findMany)
+	if err != nil {
+		t.Error(err)
+	}
+	for i := 0; i < 3000; i++ {
+		if mp[fmt.Sprintf("%d", i)] != fmt.Sprintf("%d", i) {
+			t.Error("res not v")
+		}
+	}
+	mp, err = MultiGet(keys, findMany)
+	if err != nil {
+		t.Error(err)
+	}
+	Delete(keys...)
+	for i := 0; i < 3000; i++ {
+		if debugExist(fmt.Sprintf("%d", i)) {
+			t.Error("still in")
+		}
+	}
+	for i := 3000; i < 4000; i++ {
+		if mp[fmt.Sprintf("%d", i)] != "" {
+			t.Error("it should be empty")
+		}
+	}
+}

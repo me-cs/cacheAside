@@ -9,3 +9,48 @@
 ## Description
 cacheAside is a generic cache-aside implementation
 
+### Example use:
+
+```go
+package main
+
+import (
+	"fmt"
+	
+	"github.com/me-cs/cacheAside"
+)
+
+type UserInfo struct {
+	Id   string
+	Name string
+}
+
+func init() {
+	cacheAside.Init(nil)
+}
+
+// you db fetch method
+
+func DbUserInfo(id string) (*UserInfo, bool, error) {
+	return &UserInfo{
+		Id:   "1",
+		Name: "tom",
+	}, false, nil
+}
+
+// warp you dao fetch method
+
+func DaoUserInfo(id string) (*UserInfo, error) {
+	return cacheAside.Get(id, DbUserInfo)
+}
+
+// user in business code
+func main() {
+	u, err := DaoUserInfo("1")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("%+v\n", u)
+}
+
+```

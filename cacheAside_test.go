@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -334,5 +336,64 @@ func TestMultiGetCacheMiss(t *testing.T) {
 	}
 	if mp["not exist"] != "" {
 		t.Error("should be empty")
+	}
+}
+
+func TestGetSingleFlight(t *testing.T) {
+	debugInit(nil)
+	accessDb := atomic.Int32{}
+	foundWithCounter := func(id string) (string, bool, error) {
+		accessDb.Add(1)
+		return found(id)
+	}
+	wg := sync.WaitGroup{}
+	wg.Add(1000)
+	for i := 0; i < 1000; i++ {
+		go func() {
+			defer wg.Done()
+			_, err := Get("hello", foundWithCounter)
+			if err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	t.Log(accessDb.Load())
+	if accessDb.Load() >= 1000 {
+		t.Error("should much less than 1000")
+	}
+}
+
+func TestCacheExpire(t *testing.T) {
+	debugInit(&Option{
+		BatchSize:          100,
+		DefaultCacheExpire: 5 * time.Second,
+		MissCacheExpire:    time.Minute,
+		CleanInterval:      time.Second * 3,
+	})
+	_, err := Get("hello", found)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !debugExist("hello") {
+		t.Error("should exist")
+	}
+	time.Sleep(time.Second * 6)
+	if debugExist("hello") {
+		t.Fatal("should not exist")
+	}
+	_, err = Get("hello", found)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	debugInit(nil)
+	for i := 0; i < b.N; i++ {
+		_, err := Get("hello", found)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }

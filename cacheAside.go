@@ -63,7 +63,7 @@ func newCacheAside(opt *Option) *cacheAside {
 	}
 }
 
-type notFountPlaceHolder struct{}
+type notFoundPlaceHolder struct{}
 
 func singleFlightKey(t any) string {
 	k := reflect.TypeOf(t).String()
@@ -75,7 +75,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 	v, ok := c.cache.Get(key)
 	if ok {
 		switch v.(type) {
-		case notFountPlaceHolder:
+		case notFoundPlaceHolder:
 			err = ErrNotFound
 		default:
 			res = v.(U)
@@ -97,7 +97,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 		return
 	}
 	if err == ErrNotFound {
-		miss = notFountPlaceHolder{}
+		miss = notFoundPlaceHolder{}
 	} else {
 		miss = res
 	}
@@ -108,7 +108,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 func addCacheAnyItem(k string, u any) {
 	expire := defaultCacheExpire
 	switch u.(type) {
-	case notFountPlaceHolder:
+	case notFoundPlaceHolder:
 		expire = defaultMissCacheExpire
 	}
 	c.cache.Set(k, u, c.unstable.AroundDuration(expire))
@@ -136,7 +136,7 @@ func cacheAnyThings[T any](keys []string) (res map[string]T) {
 			res = make(map[string]T, len(keys))
 		}
 		switch v.(type) {
-		case notFountPlaceHolder:
+		case notFoundPlaceHolder:
 			delete(ress, key)
 		case T:
 			res[key] = v.(T)
@@ -206,7 +206,7 @@ func MultiGet[U any](keys []string, dbFetch func(id []string) (map[string]U, err
 	for _, key := range miss {
 		_, ok := res[key]
 		if !ok {
-			cacheData[key] = notFountPlaceHolder{}
+			cacheData[key] = notFoundPlaceHolder{}
 		}
 	}
 	addCacheAnyItems(cacheData)
@@ -220,7 +220,7 @@ func addCacheAnyItems(values map[string]any) {
 	for id, val := range values {
 		expire := defaultCacheExpire
 		switch val.(type) {
-		case notFountPlaceHolder:
+		case notFoundPlaceHolder:
 			expire = defaultMissCacheExpire
 		}
 		c.cache.Set(id, val, c.unstable.AroundDuration(expire))

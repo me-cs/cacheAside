@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 )
 
 var (
@@ -23,6 +24,27 @@ func init() {
 var (
 	dbNotFound = errors.New("not found")
 )
+
+func TestOption(t *testing.T) {
+	Init(&Option{
+		BatchSize:          100,
+		DefaultCacheExpire: time.Hour * 24 * 3,
+		MissCacheExpire:    time.Minute * 2,
+		CleanInterval:      time.Hour * 2,
+	})
+	if batchSize != 100 {
+		t.Error("batchSize not equal")
+	}
+	if defaultCacheExpire != time.Hour*24*3 {
+		t.Error("defaultCacheExpire not equal")
+	}
+	if defaultMissCacheExpire != time.Minute*2 {
+		t.Error("defaultMissCacheExpire not equal")
+	}
+	if defaultCleanInterval != time.Hour*2 {
+		t.Error("defaultCleanInterval not equal")
+	}
+}
 
 func find(key string) (string, error) {
 	if v, ok := dataBase[key]; ok {

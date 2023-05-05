@@ -156,9 +156,6 @@ func cacheAnyThings[T any](keys []string) (res map[string]T) {
 		if !ok {
 			continue
 		}
-		if res == nil {
-			res = make(map[string]T, len(keys))
-		}
 		switch v.(type) {
 		case notFoundPlaceHolder:
 			delete(ress, key)

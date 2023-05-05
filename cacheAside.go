@@ -108,7 +108,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 	rr, err, _ = c.sfGroup.Do(singleFlightKey(res)+key, func() (r any, e error) {
 		var notFound bool
 		r, notFound, e = dbFetch(key)
-		if notFound {
+		if e == nil && notFound {
 			e = ErrNotFound
 		}
 		return

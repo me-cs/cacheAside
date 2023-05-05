@@ -13,41 +13,60 @@ import (
 )
 
 var (
-	batchSize              = 1000
-	defaultCacheExpire     = time.Hour * 24 * 7
+	//batchSize is the number of keys to be fetched from db in one batch
+	batchSize = 1000
+	//defaultCacheExpire is the default expire time of cache
+	defaultCacheExpire = time.Hour * 24 * 7
+	//defaultMissCacheExpire is the default expire time of miss cache
 	defaultMissCacheExpire = time.Minute
-	defaultCleanInterval   = time.Hour
+	//defaultCleanInterval is the default clean interval of cache
+	defaultCleanInterval = time.Hour
 )
 
 var (
+	//ErrNotFound is the error returned when the key is not found in cache and db
 	ErrNotFound = errors.New("not found")
 )
 
 var (
+	// c is the cache aside instance
 	c *cacheAside
+	// o is the sync.Once instance
 	o sync.Once
 )
 
+// Init initializes the cache aside instance
 func Init(opt *Option) {
 	o.Do(func() {
 		c = newCacheAside(opt)
 	})
 }
 
+// cacheAside is the cache aside instance
 type cacheAside struct {
-	cache    *cache.Cache
-	sfKey    sync.Map
+	// cache is the cache instance
+	cache *cache.Cache
+	// sfKey is the single flight key
+	sfKey sync.Map
+	// unstable is the unstable instance
 	unstable Unstable
-	sfGroup  singleflight.Group
+	// sfGroup is the single flight group
+	sfGroup singleflight.Group
 }
 
+// Option is the option of cache aside
 type Option struct {
-	BatchSize          int
+	// BatchSize is the number of keys to be fetched from db in one batch
+	BatchSize int
+	// DefaultCacheExpire is the default expire time of cache
 	DefaultCacheExpire time.Duration
-	MissCacheExpire    time.Duration
-	CleanInterval      time.Duration
+	// MissCacheExpire is the default expire time of miss cache
+	MissCacheExpire time.Duration
+	// CleanInterval is the default clean interval of cache
+	CleanInterval time.Duration
 }
 
+// newCacheAside creates a new cache aside instance
 func newCacheAside(opt *Option) *cacheAside {
 	if opt != nil {
 		batchSize = opt.BatchSize
@@ -63,14 +82,17 @@ func newCacheAside(opt *Option) *cacheAside {
 	}
 }
 
+// notFoundPlaceHolder is the placeholder of not found key
 type notFoundPlaceHolder struct{}
 
+// singleFlightKey returns the single flight key
 func singleFlightKey(t any) string {
 	k := reflect.TypeOf(t).String()
 	v, _ := c.sfKey.LoadOrStore(k, "singleFlight:"+k+":")
 	return v.(string)
 }
 
+// Get gets the value from cache, if not found, fetch from db then add to cache
 func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err error) {
 	v, ok := c.cache.Get(key)
 	if ok {
@@ -105,6 +127,7 @@ func Get[U any](key string, dbFetch func(string) (U, bool, error)) (res U, err e
 	return
 }
 
+// addCacheAnyItem add the item to cache
 func addCacheAnyItem(k string, u any) {
 	expire := defaultCacheExpire
 	switch u.(type) {
@@ -114,6 +137,7 @@ func addCacheAnyItem(k string, u any) {
 	c.cache.Set(k, u, c.unstable.AroundDuration(expire))
 }
 
+// cacheAnyThings caches any things
 func cacheAnyThings[T any](keys []string) (res map[string]T) {
 	l := len(keys)
 	if l == 0 {
@@ -147,6 +171,7 @@ func cacheAnyThings[T any](keys []string) (res map[string]T) {
 	return
 }
 
+// MultiGet gets the values from cache, if not found, fetch from db then add to cache
 func MultiGet[U any](keys []string, dbFetch func(id []string) (map[string]U, error)) (res map[string]U, err error) {
 	if len(keys) == 0 {
 		return
@@ -213,6 +238,7 @@ func MultiGet[U any](keys []string, dbFetch func(id []string) (map[string]U, err
 	return
 }
 
+// addCacheAnyItems add the items to cache
 func addCacheAnyItems(values map[string]any) {
 	if len(values) == 0 {
 		return
@@ -228,7 +254,8 @@ func addCacheAnyItems(values map[string]any) {
 	return
 }
 
-func Del(k ...string) {
+// Delete deletes the key from cache
+func Delete(k ...string) {
 	for _, v := range k {
 		c.cache.Delete(v)
 	}

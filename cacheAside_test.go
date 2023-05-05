@@ -151,7 +151,7 @@ func TestGetThenDel(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	Del("hello")
+	Delete("hello")
 	exist := debugExist("hello")
 	if exist {
 		t.Error("hello should not exist")
@@ -254,7 +254,7 @@ func TestMultiGet(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	Del(keys...)
+	Delete(keys...)
 	for i := 0; i < 2000; i++ {
 		if debugExist(fmt.Sprintf("%d", i)) {
 			t.Error("still in")

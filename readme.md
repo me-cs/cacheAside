@@ -29,7 +29,7 @@ func init() {
 	cacheAside.Init(nil)
 }
 
-// you db fetch method
+// your db fetch method
 
 func DbUserInfo(id string) (*UserInfo, bool, error) {
 	return &UserInfo{
@@ -38,13 +38,13 @@ func DbUserInfo(id string) (*UserInfo, bool, error) {
 	}, false, nil
 }
 
-// warp you dao fetch method
+// warp your dao fetch method
 
 func DaoUserInfo(id string) (*UserInfo, error) {
 	return cacheAside.Get(id, DbUserInfo)
 }
 
-// user in business code
+// fetch user info in business code
 func main() {
 	u, err := DaoUserInfo("1")
 	if err != nil {
